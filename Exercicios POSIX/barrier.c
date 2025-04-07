@@ -105,11 +105,17 @@
      sleep((id % 2) + 1);
  }
  
+ // Estrutura para passar dados para a thread
+ typedef struct {
+     int process_id;
+     barrier_t *barrier;
+ } ProcessData;
+ 
  // Função para os processos
  void* process(void* arg) {
-     int *data = (int*)arg;
-     int process_id = data[0];
-     barrier_t *barrier = (barrier_t*)data[1];
+     ProcessData *data = (ProcessData*)arg;
+     int process_id = data->process_id;
+     barrier_t *barrier = data->barrier;
      
      printf("Processo %d iniciado\n", process_id);
      
@@ -135,7 +141,7 @@
  int main() {
      int N = 4;  // Número de processos
      pthread_t threads[N];
-     int thread_data[N][2];  // [process_id, barrier_ptr]
+     ProcessData thread_data[N];
      
      // Criar e inicializar a barreira
      barrier_t barrier;
@@ -143,10 +149,10 @@
      
      // Criar as threads para os processos
      for (int i = 0; i < N; i++) {
-         thread_data[i][0] = i;
-         thread_data[i][1] = (int)&barrier;
+         thread_data[i].process_id = i;
+         thread_data[i].barrier = &barrier;
          
-         if (pthread_create(&threads[i], NULL, process, thread_data[i]) != 0) {
+         if (pthread_create(&threads[i], NULL, process, &thread_data[i]) != 0) {
              perror("Erro ao criar thread");
              return 1;
          }
