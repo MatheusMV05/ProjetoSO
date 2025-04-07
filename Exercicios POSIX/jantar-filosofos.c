@@ -1,15 +1,4 @@
-/*
- * Solução para o Exercício 2:
- * Jantar dos Filósofos com eliminação de impasse
- * 
- * O código original apresenta risco de impasse porque todos os filósofos
- * podem pegar o garfo da direita simultaneamente e depois ficarem bloqueados
- * esperando o da esquerda, que nunca estará disponível.
- * 
- * A solução implementada aqui usa duas abordagens para resolver o impasse:
- * 1. Modificamos a ordem de aquisição dos garfos para filósofos ímpares
- * 2. Adicionamos um tempo de espera aleatório antes de tentar pegar os garfos
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>
@@ -50,9 +39,6 @@
          
          printf("Filósofo %d está com fome\n", id);
          
-         // Solução 1: Filósofos com ID par pegam primeiro o garfo da direita,
-         // enquanto filósofos com ID ímpar pegam primeiro o da esquerda.
-         // Esta ordem diferente quebra a simetria e evita o impasse.
          if (id % 2 == 0) {
              printf("Filósofo %d tentando pegar garfo %d (direita)\n", id, garfo_direita);
              sem_wait(&garfo[garfo_direita]);
@@ -70,7 +56,7 @@
              printf("Filósofo %d pegou garfo %d (esquerda)\n", id, garfo_esquerda);
              
              // Adiciona um pequeno delay antes de tentar pegar o segundo garfo
-             usleep(100000);  // 100ms
+             usleep(100000);  
              
              printf("Filósofo %d tentando pegar garfo %d (direita)\n", id, garfo_direita);
              sem_wait(&garfo[garfo_direita]);
@@ -125,7 +111,6 @@
      printf("\nPressione Enter para encerrar a simulação...\n");
      getchar();
      
-     // Não precisamos aguardar as threads terminarem, vamos encerrar o programa
      
      // Destruir os semáforos
      for (int i = 0; i < N; i++) {

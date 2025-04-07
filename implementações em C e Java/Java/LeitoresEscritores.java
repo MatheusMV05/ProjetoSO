@@ -1,9 +1,7 @@
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 
-/**
- * Implementação do problema leitores/escritores com priorização para escritores em Java
- */
+
 public class LeitoresEscritores {
     private static final int NUM_READERS = 5;   // Número de leitores
     private static final int NUM_WRITERS = 2;   // Número de escritores
@@ -202,16 +200,3 @@ public class LeitoresEscritores {
     }
 }
 
-/*
- * Observação sobre a prioridade para escritores:
- * Esta implementação garante a prioridade para escritores de duas formas:
- * 
- * 1. Quando um escritor está aguardando, ele bloqueia a entrada de novos leitores
- *    utilizando o semáforo readerEntry. Os leitores que já estão na área compartilhada
- *    podem concluir suas leituras, mas nenhum novo leitor poderá entrar.
- * 
- * 2. Os escritores são iniciados antes dos leitores, o que lhes dá uma vantagem inicial.
- * 
- * Esta estratégia garante que, quando há escritores aguardando, eles terão prioridade
- * sobre novos leitores, evitando assim a inanição dos escritores.
- */

@@ -5,9 +5,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Implementação do problema produtor/consumidor usando threads, locks e variáveis de condição em Java
- */
+
 public class ProdutorConsumidorLocks {
     private static final int BUFFER_SIZE = 5;      // Tamanho do buffer compartilhado
     private static final int NUM_ITEMS = 20;       // Número total de itens a serem produzidos

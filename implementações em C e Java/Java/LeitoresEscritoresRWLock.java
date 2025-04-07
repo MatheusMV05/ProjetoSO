@@ -1,13 +1,10 @@
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Implementação do problema leitores/escritores com priorização para escritores em Java usando ReadWriteLock
- */
+
 public class LeitoresEscritoresRWLock {
     private static final int NUM_READERS = 5;   // Número de leitores
     private static final int NUM_WRITERS = 2;   // Número de escritores
@@ -166,21 +163,3 @@ public class LeitoresEscritoresRWLock {
     }
 }
 
-/*
- * Observação sobre a prioridade para escritores:
- * 
- * Esta implementação utiliza a classe ReentrantReadWriteLock do Java, que permite
- * configurar a política de acesso para dar preferência a escritores. Ao criar o
- * ReadWriteLock com o parâmetro 'true', estamos indicando que queremos dar
- * preferência aos escritores sobre os leitores.
- * 
- * Além disso, usamos duas estratégias adicionais para garantir ainda mais prioridade:
- * 
- * 1. Um contador atômico de escritores aguardando, que os leitores consultam
- *    antes de tentar obter o lock, cedendo a vez se houver escritores esperando.
- * 
- * 2. Iniciar as threads escritoras antes das leitoras, dando uma vantagem inicial.
- * 
- * Isso garante que os escritores não sofram inanição mesmo com muitos leitores
- * concorrentes.
- */

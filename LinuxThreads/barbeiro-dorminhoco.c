@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
+#include <errno.h>
+#include <string.h>
 
 // Estrutura para representar a fila de clientes
 typedef struct {
@@ -18,7 +21,7 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_barbeiro = PTHREAD_COND_INITIALIZER;  // Condição para acordar o barbeiro
 pthread_cond_t cond_cliente = PTHREAD_COND_INITIALIZER;   // Condição para o cliente esperar o barbeiro
 
-int continuar_execucao = 1;
+volatile sig_atomic_t continuar_execucao = 1;
 int id_cliente = 0;
 int *barbeiros_ocupados;  // Array para status dos barbeiros (0=dormindo, 1=ocupado)
 
@@ -28,13 +31,24 @@ int num_cadeiras;
 int tempo_corte;
 int intervalo_chegada;
 
+// Manipulador de sinal para encerramento adequado
+void manipular_sinal(int sig) {
+    continuar_execucao = 0;
+    printf("\nRecebido sinal de encerramento (%d). Finalizando...\n", sig);
+}
+
 // Inicializa a fila de clientes
-void inicializar_fila(int capacidade) {
+int inicializar_fila(int capacidade) {
     fila.clientes = (int*) malloc(capacidade * sizeof(int));
+    if (fila.clientes == NULL) {
+        fprintf(stderr, "Erro ao alocar memória para a fila: %s\n", strerror(errno));
+        return -1;
+    }
     fila.capacidade = capacidade;
     fila.count = 0;
     fila.inicio = 0;
     fila.fim = 0;
+    return 0;
 }
 
 // Adiciona um cliente à fila, retorna 1 se sucesso, 0 se fila cheia
@@ -68,13 +82,23 @@ void* barbeiro_func(void *arg) {
     printf("Barbeiro %d dormindo.\n", id_barbeiro);
     
     while (continuar_execucao) {
+        int err;
+        
         // Bloqueia o mutex para acessar a fila
-        pthread_mutex_lock(&mutex);
+        if ((err = pthread_mutex_lock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao bloquear mutex (barbeiro %d): %s\n", 
+                    id_barbeiro, strerror(err));
+            continue;
+        }
         
         // Enquanto não houver clientes, o barbeiro dorme
         while (fila.count == 0 && continuar_execucao) {
             // Libera o mutex e bloqueia na condição
-            pthread_cond_wait(&cond_barbeiro, &mutex);
+            if ((err = pthread_cond_wait(&cond_barbeiro, &mutex)) != 0) {
+                fprintf(stderr, "Erro ao esperar pela condição (barbeiro %d): %s\n", 
+                        id_barbeiro, strerror(err));
+                break;
+            }
         }
         
         // Verificar se devemos encerrar
@@ -91,21 +115,34 @@ void* barbeiro_func(void *arg) {
         printf("Barbeiro %d cortando o cabelo do cliente %d.\n", id_barbeiro, cliente);
         
         // Sinaliza que um cliente pode entrar se houver espaço na fila
-        pthread_cond_signal(&cond_cliente);
+        if ((err = pthread_cond_signal(&cond_cliente)) != 0) {
+            fprintf(stderr, "Erro ao sinalizar condição (barbeiro %d): %s\n", 
+                    id_barbeiro, strerror(err));
+        }
         
         // Libera o mutex para deixar outros clientes entrarem enquanto corta o cabelo
-        pthread_mutex_unlock(&mutex);
+        if ((err = pthread_mutex_unlock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao desbloquear mutex (barbeiro %d): %s\n", 
+                    id_barbeiro, strerror(err));
+        }
         
         // Simula o tempo para cortar o cabelo
         sleep(tempo_corte);
         
         // Volta a bloquear o mutex para atualizar o status
-        pthread_mutex_lock(&mutex);
+        if ((err = pthread_mutex_lock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao bloquear mutex (barbeiro %d): %s\n", 
+                    id_barbeiro, strerror(err));
+            continue;
+        }
         
         printf("Barbeiro %d terminou de cortar o cabelo do cliente %d.\n", id_barbeiro, cliente);
         barbeiros_ocupados[id_barbeiro-1] = 0;  // Barbeiro disponível novamente
         
-        pthread_mutex_unlock(&mutex);
+        if ((err = pthread_mutex_unlock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao desbloquear mutex (barbeiro %d): %s\n", 
+                    id_barbeiro, strerror(err));
+        }
     }
     
     printf("Barbeiro %d encerrou o expediente.\n", id_barbeiro);
@@ -116,14 +153,34 @@ void* barbeiro_func(void *arg) {
 void* gerador_clientes(void *arg) {
     while (continuar_execucao) {
         // Cria um novo cliente
+        int novo_cliente;
+        int err;
+        
+        // Bloqueia o mutex para acessar o contador de clientes
+        if ((err = pthread_mutex_lock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao bloquear mutex (gerador): %s\n", strerror(err));
+            sleep(1);
+            continue;
+        }
+        
         id_cliente++;
-        printf("Cliente %d chegou.\n", id_cliente);
+        novo_cliente = id_cliente;
+        
+        if ((err = pthread_mutex_unlock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao desbloquear mutex (gerador): %s\n", strerror(err));
+        }
+        
+        printf("Cliente %d chegou.\n", novo_cliente);
         
         // Bloqueia o mutex para acessar a fila
-        pthread_mutex_lock(&mutex);
+        if ((err = pthread_mutex_lock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao bloquear mutex (gerador): %s\n", strerror(err));
+            sleep(1);
+            continue;
+        }
         
         // Tenta adicionar o cliente à fila
-        if (enfileirar(id_cliente)) {
+        if (enfileirar(novo_cliente)) {
             // Verifica se algum barbeiro está dormindo e acorda
             int barbeiro_acordado = 0;
             for (int i = 0; i < num_barbeiros; i++) {
@@ -135,15 +192,19 @@ void* gerador_clientes(void *arg) {
             
             if (barbeiro_acordado) {
                 // Acorda um barbeiro
-                pthread_cond_signal(&cond_barbeiro);
+                if ((err = pthread_cond_signal(&cond_barbeiro)) != 0) {
+                    fprintf(stderr, "Erro ao sinalizar condição (gerador): %s\n", strerror(err));
+                }
             }
         } else {
             // A fila está cheia, cliente vai embora
-            printf("Cliente %d foi embora sem cortar o cabelo. Sala de espera cheia.\n", id_cliente);
+            printf("Cliente %d foi embora sem cortar o cabelo. Sala de espera cheia.\n", novo_cliente);
         }
         
         // Libera o mutex
-        pthread_mutex_unlock(&mutex);
+        if ((err = pthread_mutex_unlock(&mutex)) != 0) {
+            fprintf(stderr, "Erro ao desbloquear mutex (gerador): %s\n", strerror(err));
+        }
         
         // Aguarda antes de gerar o próximo cliente
         sleep(intervalo_chegada);
@@ -152,10 +213,26 @@ void* gerador_clientes(void *arg) {
     return NULL;
 }
 
+void limpar_recursos() {
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond_barbeiro);
+    pthread_cond_destroy(&cond_cliente);
+    
+    if (fila.clientes != NULL) {
+        free(fila.clientes);
+        fila.clientes = NULL;
+    }
+    
+    if (barbeiros_ocupados != NULL) {
+        free(barbeiros_ocupados);
+        barbeiros_ocupados = NULL;
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 5) {
         printf("Uso: %s <num_barbeiros> <num_cadeiras> <tempo_corte> <intervalo_chegada>\n", argv[0]);
-        return 1;
+        return EXIT_FAILURE;
     }
     
     // Parâmetros da simulação
@@ -166,33 +243,80 @@ int main(int argc, char *argv[]) {
     
     if (num_barbeiros <= 0 || num_cadeiras < 0 || tempo_corte <= 0 || intervalo_chegada <= 0) {
         printf("Todos os parâmetros devem ser maiores que zero\n");
-        return 1;
+        return EXIT_FAILURE;
     }
     
+    // Configurar manipulador de sinais
+    signal(SIGINT, manipular_sinal);
+    
     // Inicializar a fila de clientes
-    inicializar_fila(num_cadeiras);
+    if (inicializar_fila(num_cadeiras) != 0) {
+        return EXIT_FAILURE;
+    }
     
     // Inicializar o array de status dos barbeiros
     barbeiros_ocupados = (int*) calloc(num_barbeiros, sizeof(int));
+    if (barbeiros_ocupados == NULL) {
+        fprintf(stderr, "Erro ao alocar memória para status dos barbeiros: %s\n", strerror(errno));
+        limpar_recursos();
+        return EXIT_FAILURE;
+    }
     
     // Criar threads para os barbeiros
     pthread_t *barbeiros = (pthread_t*) malloc(num_barbeiros * sizeof(pthread_t));
     int *ids_barbeiros = (int*) malloc(num_barbeiros * sizeof(int));
     
+    if (barbeiros == NULL || ids_barbeiros == NULL) {
+        fprintf(stderr, "Erro ao alocar memória para threads: %s\n", strerror(errno));
+        free(barbeiros);
+        free(ids_barbeiros);
+        limpar_recursos();
+        return EXIT_FAILURE;
+    }
+    
     for (int i = 0; i < num_barbeiros; i++) {
         ids_barbeiros[i] = i + 1;  // IDs dos barbeiros começam em 1
         
-        if (pthread_create(&barbeiros[i], NULL, barbeiro_func, &ids_barbeiros[i]) != 0) {
-            perror("Erro ao criar thread do barbeiro");
-            return 1;
+        int err;
+        if ((err = pthread_create(&barbeiros[i], NULL, barbeiro_func, &ids_barbeiros[i])) != 0) {
+            fprintf(stderr, "Erro ao criar thread do barbeiro %d: %s\n", i+1, strerror(err));
+            // Sinalizar para encerrar as threads já criadas
+            continuar_execucao = 0;
+            pthread_cond_broadcast(&cond_barbeiro);
+            pthread_cond_broadcast(&cond_cliente);
+            
+            // Aguardar as threads que já foram criadas
+            for (int j = 0; j < i; j++) {
+                pthread_join(barbeiros[j], NULL);
+            }
+            
+            free(barbeiros);
+            free(ids_barbeiros);
+            limpar_recursos();
+            return EXIT_FAILURE;
         }
     }
     
     // Criar thread para o gerador de clientes
     pthread_t gerador;
-    if (pthread_create(&gerador, NULL, gerador_clientes, NULL) != 0) {
-        perror("Erro ao criar thread do gerador de clientes");
-        return 1;
+    int err;
+    if ((err = pthread_create(&gerador, NULL, gerador_clientes, NULL)) != 0) {
+        fprintf(stderr, "Erro ao criar thread do gerador de clientes: %s\n", strerror(err));
+        
+        // Sinalizar para encerrar as threads
+        continuar_execucao = 0;
+        pthread_cond_broadcast(&cond_barbeiro);
+        pthread_cond_broadcast(&cond_cliente);
+        
+        // Aguardar as threads dos barbeiros
+        for (int i = 0; i < num_barbeiros; i++) {
+            pthread_join(barbeiros[i], NULL);
+        }
+        
+        free(barbeiros);
+        free(ids_barbeiros);
+        limpar_recursos();
+        return EXIT_FAILURE;
     }
     
     // Aguardar um comando para encerrar a simulação
@@ -215,10 +339,10 @@ int main(int argc, char *argv[]) {
     }
     
     // Liberar memória
-    free(fila.clientes);
     free(barbeiros);
     free(ids_barbeiros);
-    free(barbeiros_ocupados);
+    limpar_recursos();
     
-    return 0;
+    printf("Simulação encerrada com sucesso.\n");
+    return EXIT_SUCCESS;
 }

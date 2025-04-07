@@ -1,8 +1,4 @@
-/*
- * Atividade 4:
- * Implementação do problema leitores/escritores com priorização para escritores
- * usando threads e rwlocks POSIX
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>
@@ -123,8 +119,6 @@
      // Inicializar o atributo de rwlock para preferência de escritores
      pthread_rwlockattr_init(&rwlock_attr);
      
-     // Em alguns sistemas, é possível definir explicitamente a preferência:
-     // pthread_rwlockattr_setkind_np(&rwlock_attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
      
      // Inicializar o rwlock com os atributos definidos
      pthread_rwlock_init(&rwlock, &rwlock_attr);
@@ -178,22 +172,3 @@
      return 0;
  }
  
- /*
-  * Observação sobre a prioridade para escritores:
-  * 
-  * Implementar a prioridade para escritores usando rwlocks POSIX é um pouco complicado,
-  * pois o comportamento padrão varia entre sistemas. Em alguns sistemas Linux, o rwlock
-  * já tem preferência para escritores por padrão, enquanto em outros é necessário
-  * definir explicitamente.
-  * 
-  * Nesta implementação, usamos uma estratégia adicional para garantir a preferência:
-  * 1. Mantemos um contador de escritores aguardando
-  * 2. Os leitores verificam esse contador e, se há escritores aguardando, atrasam
-  *    sua leitura para dar prioridade aos escritores
-  * 3. Iniciamos as threads escritoras antes das leitoras
-  * 
-  * Em ambientes GNU/Linux, pode-se usar a função pthread_rwlockattr_setkind_np() para
-  * definir explicitamente a preferência para escritores, usando a constante
-  * PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP. No entanto, isso não é portável
-  * para todos os sistemas POSIX.
-  */

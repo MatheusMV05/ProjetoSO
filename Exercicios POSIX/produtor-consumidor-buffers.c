@@ -1,7 +1,4 @@
-/*
- * Solução para o Exercício 1:
- * Sistema produtor/consumidor com dois buffers limitados organizados na forma X → B1 → Y → B2 → Z
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>
@@ -196,7 +193,6 @@
      printf("\nPressione Enter para encerrar a simulação...\n");
      getchar();
      
-     // Não precisamos aguardar as threads terminarem, pois vamos encerrar o programa
      
      // Destruir os semáforos
      sem_destroy(&vaga_B1);

@@ -3,9 +3,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 
-/**
- * Implementação do problema produtor/consumidor usando threads e semáforos em Java
- */
+
 public class ProdutorConsumidor {
     private static final int BUFFER_SIZE = 5;      // Tamanho do buffer compartilhado
     private static final int NUM_ITEMS = 20;       // Número total de itens a serem produzidos

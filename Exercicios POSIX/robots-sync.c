@@ -1,9 +1,4 @@
-/*
- * Solução para o Exercício 3:
- * Sincronização de robôs Bart, Lisa, Maggie na sequência
- * Bart → Lisa → Maggie → Lisa → Bart → Lisa → Maggie → ...
- * usando semáforos
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>
@@ -101,7 +96,7 @@
      printf("\nPressione Enter para encerrar a simulação...\n");
      getchar();
      
-     // Não precisamos aguardar as threads terminarem, vamos encerrar o programa
+
      
      // Destruir os semáforos
      sem_destroy(&sem_bart);

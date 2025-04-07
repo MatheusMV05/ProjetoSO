@@ -1,10 +1,3 @@
-/*
- * Solução para o Exercício 4:
- * Implementação do operador Rendez-Vous usando semáforos
- * 
- * O Rendez-Vous é um operador de sincronização forte entre dois processos,
- * onde um processo espera até que ambos cheguem ao ponto de encontro.
- */
 
  #include <stdio.h>
  #include <stdlib.h>

@@ -1,8 +1,4 @@
-/*
- * Atividade 3:
- * Implementação do problema leitores/escritores com priorização para escritores
- * usando threads e semáforos POSIX
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>

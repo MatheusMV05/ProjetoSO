@@ -1,7 +1,4 @@
-/*
- * Atividade 2:
- * Implementação do problema produtor/consumidor usando threads e variáveis de condição POSIX
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>

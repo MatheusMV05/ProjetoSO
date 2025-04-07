@@ -1,10 +1,3 @@
-/*
- * Solução para o Exercício 5:
- * Implementação de barreira para N processos usando semáforos
- * 
- * A Barreira é um operador de sincronização forte entre N processos,
- * onde eles esperam até que todos cheguem à barreira.
- */
 
  #include <stdio.h>
  #include <stdlib.h>

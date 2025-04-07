@@ -1,7 +1,4 @@
-/*
- * Atividade 1:
- * Implementação do problema produtor/consumidor usando threads e semáforos POSIX
- */
+
 
  #include <stdio.h>
  #include <stdlib.h>
